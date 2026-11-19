@@ -385,6 +385,52 @@
         const input = context.createGain();
         const output = context.createGain();
 
+        // V5: cadeia independente. Os ganhos do EQ seguem exatamente
+        // os valores definidos para o preset Extreme Bass.
+        if (selectedPreset === 'v5') {
+            const bands = [
+                { frequency: 30, gain: 10, q: 0.75 },
+                { frequency: 45, gain: 15, q: 0.75 },
+                { frequency: 60, gain: 12, q: 0.80 },
+                { frequency: 80, gain: 9,  q: 0.90 },
+                { frequency: 110, gain: 6, q: 0.85 },
+                { frequency: 150, gain: 2, q: 0.80 },
+                { frequency: 220, gain: 0, q: 0.90 }
+            ];
+
+            let previous = input;
+
+            bands.forEach(band => {
+                const filter = context.createBiquadFilter();
+                filter.type = 'peaking';
+                filter.frequency.value = band.frequency;
+                filter.Q.value = band.q;
+                filter.gain.value = band.gain;
+                previous.connect(filter);
+                previous = filter;
+            });
+
+            // Dinâmica baseada na V4, sem ganho de compensação adicional.
+            const compressor = context.createDynamicsCompressor();
+            compressor.threshold.value = -19;
+            compressor.ratio.value = 2.8;
+            compressor.attack.value = 0.008;
+            compressor.release.value = 0.12;
+            compressor.knee.value = 10;
+
+            const limiter = context.createDynamicsCompressor();
+            limiter.threshold.value = -0.9;
+            limiter.ratio.value = 20;
+            limiter.attack.value = 0.005;
+            limiter.release.value = 0.08;
+
+            previous.connect(compressor);
+            compressor.connect(limiter);
+            limiter.connect(output);
+
+            return { input, output };
+        }
+
         const sub30 = context.createBiquadFilter();
         const low = context.createBiquadFilter();
         const bass60 = context.createBiquadFilter();
@@ -636,3 +682,4 @@
     }
 
 })();
+            
